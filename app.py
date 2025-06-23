@@ -32,7 +32,7 @@ if not df.empty:
                 df["SMA_20"] = df["Close"].rolling(window=20).mean()
                 df["RSI"] = ta.momentum.RSIIndicator(df["Close"]).rsi()
                 macd = ta.trend.MACD(df["Close"])
-                df["MACD"] = macd.macd()
+                df["MACD"] = macd.macd().squeeze()
 
                 st.line_chart(df[["Close", "SMA_20"]])
                 st.line_chart(df[["RSI"]])
