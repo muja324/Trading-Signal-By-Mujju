@@ -27,18 +27,26 @@ if not df.empty:
 
     st.subheader("📊 Technical Indicators")
     if ta:
-        with st.spinner("Calculating indicators..."):
-            try:
-                df["SMA_20"] = df["Close"].rolling(window=20).mean()
-                df["RSI"] = ta.momentum.RSIIndicator(df["Close"]).rsi()
-                macd = ta.trend.MACD(df["Close"])
-                df["MACD"] = macd.macd().squeeze()
+    with st.spinner("📊 Calculating indicators..."):
+        try:
+            df["SMA_20"] = df["Close"].rolling(window=20).mean()
+            df["RSI"] = ta.momentum.RSIIndicator(df["Close"]).rsi()
 
-                st.line_chart(df[["Close", "SMA_20"]])
-                st.line_chart(df[["RSI"]])
-                st.line_chart(df[["MACD"]])
+            macd = ta.trend.MACD(df["Close"])
+            macd_values = macd.macd()
+            if isinstance(macd_values, pd.DataFrame):
+                macd_values = macd_values.iloc[:, 0]
+            df["MACD"] = macd_values
 
-            except Exception as e:
-                st.error(f"Indicator calculation failed: {e}")
+            signal_values = macd.signal()
+            if isinstance(signal_values, pd.DataFrame):
+                signal_values = signal_values.iloc[:, 0]
+            df["MACD_Signal"] = signal_values
+
+            st.line_chart(df[["Close", "SMA_20"]])
+            st.line_chart(df[["RSI"]])
+            st.line_chart(df[["MACD", "MACD_Signal"]])
+        except Exception as e:
+            st.error(f"Indicator calculation failed: {e}")
 else:
     st.warning("No data found for the given symbol and date range.")
