@@ -1,62 +1,63 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import ta
-import joblib
+import datetime as dt
+import os
 
-st.title("📈 AI/ML Trading Signal Generator")
+# Optional: install ta only if technical indicators are used
+try:
+    import ta
+except ImportError:
+    ta = None
 
-ticker = st.text_input("Enter Stock Ticker (e.g., AAPL)", "AAPL")
+os.environ["YFINANCE_NO_CACHE"] = "true"
 
-@st.cache_data
-def get_data(ticker):
-    df = yf.download(ticker, period="6mo", progress=False, auto_adjust=False)
+st.set_page_config(page_title="📊 Stock Viewer by Mujahidul", layout="wide")
+st.title("📈 Stock Chart & Indicators Viewer")
 
-    if df.empty or 'Close' not in df.columns:
-        return pd.DataFrame()
+# Sidebar inputs
+symbol = st.sidebar.text_input("Enter Stock Symbol (e.g. AAPL or TATASTEEL.NS)", "AAPL").upper()
+today = dt.date.today()
+one_year_ago = today - dt.timedelta(days=365)
+start = st.sidebar.date_input("Start Date", one_year_ago)
+end = st.sidebar.date_input("End Date", today)
 
-    try:
-        close_series = df['Close']
-        if isinstance(close_series, pd.DataFrame):
-            close_series = close_series.squeeze()
+# Validate dates
+if start >= end:
+    st.error("⚠️ End date must be after start date.")
+    st.stop()
 
-        if len(close_series) < 25:
-            st.warning("⚠️ Not enough data for indicators. Try another ticker.")
-            return pd.DataFrame()
-
-        df['rsi'] = ta.momentum.RSIIndicator(close=close_series).rsi()
-        df['sma_20'] = ta.trend.SMAIndicator(close=close_series, window=20).sma_indicator()
-        df['macd'] = ta.trend.MACD(close=close_series).macd()
-
-        df.dropna(subset=['rsi', 'sma_20', 'macd'], inplace=True)
-
-        if df.empty:
-            st.warning("⚠️ Data insufficient after indicators applied.")
-            return pd.DataFrame()
-
-        return df
-
-    except Exception as e:
-        st.error(f"Indicator calculation error: {e}")
-        return pd.DataFrame()
-
-if ticker:
-    df = get_data(ticker)
-
+# Fetch data
+try:
+    df = yf.download(symbol, start=start, end=end)
     if df.empty:
-        st.error("❌ Failed to fetch or process data. Please check the ticker symbol.")
-    else:
-        st.subheader("🔍 Processed Data Preview")
-        st.dataframe(df.tail())
+        st.warning("❌ No data found for this symbol and date range.")
+        st.stop()
+except Exception as e:
+    st.error(f"📡 Failed to fetch data: {e}")
+    st.stop()
 
-        try:
-            X = df[['rsi', 'sma_20', 'macd']]
-            model = joblib.load("model.pkl")
+st.success(f"✅ Showing data for {symbol} from {start} to {end}")
+st.dataframe(df.tail())
 
-            df['prediction'] = model.predict(X)
-            df['Buy_Signal'] = df['prediction'].apply(lambda x: 'BUY' if x == 1 else '')
+# Plot basic charts
+st.subheader("📉 Price Charts")
+st.line_chart(df["Close"], height=300)
+st.line_chart(df["Volume"], height=150)
 
-            st.subheader("📊 Latest Buy Signals")
-            st.dataframe(df[['Close', 'rsi', 'Buy_Signal']].tail(10))
-        except Exception as e:
-            st.error(f"❌ Error during prediction: {e}")
+# Calculate Indicators
+if ta:
+    try:
+        df["SMA_20"] = df["Close"].rolling(window=20).mean()
+        df["RSI"] = ta.momentum.RSIIndicator(df["Close"]).rsi()
+        macd = ta.trend.MACD(df["Close"])
+        df["MACD"] = macd.macd()
+
+        st.subheader("📊 Technical Indicators")
+        st.line_chart(df[["Close", "SMA_20"]])
+        st.line_chart(df["RSI"])
+        st.line_chart(df["MACD"])
+    except Exception as e:
+        st.warning(f"⚠️ Indicator calculation error: {e}")
+else:
+    st.info("📦 Technical indicators not installed. Add `ta` to requirements if needed.")
