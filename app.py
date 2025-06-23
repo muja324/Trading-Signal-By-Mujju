@@ -50,8 +50,8 @@ if ta:
     try:
         df["SMA_20"] = df["Close"].rolling(window=20).mean()
         df["RSI"] = ta.momentum.RSIIndicator(df["Close"]).rsi()
-        macd = ta.trend.MACD(df["Close"])
-        df["MACD"] = macd.macd()
+macd = ta.trend.MACD(df["Close"])
+df["MACD"] = macd.macd()
 
         st.subheader("📊 Technical Indicators")
         st.line_chart(df[["Close", "SMA_20"]])
