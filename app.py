@@ -28,14 +28,14 @@ if start >= end:
     st.stop()
 
 # Fetch data
-try:
-    df = yf.download(symbol, start=start, end=end)
-    if df.empty:
-        st.warning("❌ No data found for this symbol and date range.")
-        st.stop()
-except Exception as e:
-    st.error(f"📡 Failed to fetch data: {e}")
-    st.stop()
+if ta:
+    try:
+        df["SMA_20"] = df["Close"].rolling(window=20).mean()
+        df["RSI"] = ta.momentum.RSIIndicator(df["Close"]).rsi()
+        macd = ta.trend.MACD(df["Close"])
+        df["MACD"] = macd.macd()
+    except Exception as e:
+        st.error(f"Indicator calculation failed: {e}")
 
 st.success(f"✅ Showing data for {symbol} from {start} to {end}")
 st.dataframe(df.tail())
