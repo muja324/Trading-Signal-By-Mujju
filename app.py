@@ -1,4 +1,3 @@
-
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -11,7 +10,7 @@ ticker = st.text_input("Enter Stock Ticker (e.g., AAPL)", "AAPL")
 
 @st.cache_data
 def get_data(ticker):
-    df = yf.download(ticker, period="6mo", progress=False)
+    df = yf.download(ticker, period="6mo", progress=False, auto_adjust=False)
 
     if df.empty or 'Close' not in df.columns:
         return pd.DataFrame()
